@@ -1,0 +1,43 @@
+/**
+ * For more details on how to configure Wrangler, refer to:
+ * https://developers.cloudflare.com/workers/wrangler/configuration/
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "dns-monitor",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-09-03",
+	"compatibility_flags": [
+		"global_fetch_strictly_public"
+	],
+	"assets": {
+		// The path to the directory containing the `index.html` file to be served at `/`
+		"directory": "./public"
+	},
+	"observability": {
+		"enabled": true
+	},
+	/**
+	 * Cron Triggers
+	 * Run the worker on a schedule
+	 * https://developers.cloudflare.com/workers/configuration/cron-triggers/
+	 */
+	"triggers": {
+		"crons": [
+			"*/5 * * * *" // Run every 5 minutes
+		]
+	},
+	/**
+	 * Environment Variables
+	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 */
+	"vars": {
+		"DNS_MONITOR_CONFIG": "{\"domains\":[{\"domain\":\"example.com\",\"expectedIPs\":[\"93.184.216.34\"],\"recordType\":\"A\"}]}"
+	}
+	/**
+	 * Note: Use secrets to store sensitive data.
+	 * https://developers.cloudflare.com/workers/configuration/secrets/
+	 * Run: wrangler secret put TELEGRAM_BOT_TOKEN
+	 * Run: wrangler secret put TELEGRAM_CHAT_ID
+	 */
+}
