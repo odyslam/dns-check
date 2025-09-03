@@ -52,22 +52,37 @@ The DNS monitor accepts configuration through the `DNS_MONITOR_CONFIG` environme
 - `expectedIPs`: Array of IP addresses that are considered valid
 - `recordType`: DNS record type (A, AAAA, or CNAME)
 
+### Default DeFi Protocol Monitoring
+
+The service comes pre-configured to monitor major DeFi protocols including:
+- Uniswap (app.uniswap.org)
+- AAVE (aave.com)
+- Curve Finance (curve.fi)
+- Lido (lido.fi)
+- MakerDAO (makerdao.com)
+- Sky Protocol (sky.money)
+- Compound (compound.finance)
+- SushiSwap (sushi.com)
+- PancakeSwap (pancakeswap.finance)
+- Balancer (balancer.fi)
+- Convex Finance (convex.finance)
+- Yearn Finance (yearn.finance)
+- Summer.fi (summer.fi)
+- 1inch (1inch.io)
+- Synthetix (synthetix.io)
+
 Example configuration:
 ```json
 {
   "domains": [
     {
-      "domain": "example.com",
-      "expectedIPs": ["93.184.216.34"],
+      "domain": "app.uniswap.org",
+      "expectedIPs": ["172.66.0.225", "162.159.140.227"],
       "recordType": "A"
     },
     {
-      "domain": "google.com", 
-      "expectedIPs": [
-        "142.250.185.78",
-        "142.250.185.110",
-        "142.250.185.100"
-      ],
+      "domain": "aave.com", 
+      "expectedIPs": ["104.18.21.145", "104.18.20.145"],
       "recordType": "A"
     }
   ]
