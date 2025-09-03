@@ -7,11 +7,12 @@ interface Env {
   DNS_MONITOR_CONFIG?: string;
   TELEGRAM_BOT_TOKEN?: string;
   TELEGRAM_CHAT_ID?: string;
+  DNS_HISTORY: KVNamespace;
 }
 
 async function performDNSCheck(env: Env): Promise<DNSCheckResult[]> {
   const config = loadConfig(env);
-  const checker = new DNSChecker();
+  const checker = new DNSChecker(env.DNS_HISTORY);
   
   // Create notification handlers
   const notificationHandlers: NotificationHandler[] = [];

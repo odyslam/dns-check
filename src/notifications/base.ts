@@ -5,21 +5,21 @@ export abstract class BaseNotificationHandler implements NotificationHandler {
   
   abstract notify(results: DNSCheckResult[]): Promise<void>;
   
-  protected filterHijackedResults(results: DNSCheckResult[]): DNSCheckResult[] {
-    return results.filter(result => result.isHijacked);
+  protected filterChangedResults(results: DNSCheckResult[]): DNSCheckResult[] {
+    return results.filter(result => result.hasChanged && !result.isFirstCheck);
   }
   
-  protected formatMessage(hijackedResults: DNSCheckResult[]): string {
-    if (hijackedResults.length === 0) {
-      return '✅ All domains are resolving correctly.';
+  protected formatMessage(changedResults: DNSCheckResult[]): string {
+    if (changedResults.length === 0) {
+      return '✅ All domains are resolving to their expected IPs.';
     }
     
-    let message = `🚨 DNS Hijacking Detected!\n\n`;
+    let message = `🚨 DNS Changes Detected!\n\n`;
     
-    for (const result of hijackedResults) {
+    for (const result of changedResults) {
       message += `Domain: ${result.domain}\n`;
-      message += `Expected IPs: ${result.expectedIPs.join(', ')}\n`;
-      message += `Actual IPs: ${result.actualIPs.join(', ')}\n`;
+      message += `Previous IPs: ${result.previousIPs.join(', ') || 'None'}\n`;
+      message += `Current IPs: ${result.currentIPs.join(', ') || 'None'}\n`;
       
       if (result.error) {
         message += `Error: ${result.error}\n`;
@@ -28,6 +28,8 @@ export abstract class BaseNotificationHandler implements NotificationHandler {
       message += `Time: ${new Date(result.timestamp).toISOString()}\n`;
       message += '\n';
     }
+    
+    message += `⚠️ Verify these changes are legitimate!`;
     
     return message;
   }

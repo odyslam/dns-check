@@ -1,36 +1,58 @@
-import { DomainConfig, DNSCheckResult } from './types';
+import { DomainConfig, DNSCheckResult, DNSRecord } from './types';
 
 export class DNSChecker {
   private dohProviders = [
     'https://cloudflare-dns.com/dns-query',
     'https://dns.google/resolve',
   ];
+  
+  constructor(private kvStore: KVNamespace) {}
 
   async checkDomain(config: DomainConfig): Promise<DNSCheckResult> {
     const timestamp = Date.now();
+    const recordType = config.recordType || 'A';
     
     try {
-      const actualIPs = await this.resolveDomain(
-        config.domain, 
-        config.recordType || 'A'
-      );
+      // Get current IPs
+      const currentIPs = await this.resolveDomain(config.domain, recordType);
       
-      const isHijacked = !this.areIPsMatching(actualIPs, config.expectedIPs);
+      // Get previous record from KV
+      const kvKey = `dns:${config.domain}:${recordType}`;
+      const previousRecordStr = await this.kvStore.get(kvKey);
+      const previousRecord: DNSRecord | null = previousRecordStr 
+        ? JSON.parse(previousRecordStr) 
+        : null;
+      
+      // Determine if IPs have changed
+      const hasChanged = previousRecord 
+        ? !this.areIPsMatching(currentIPs, previousRecord.ips)
+        : false;
+      
+      // Store current state in KV
+      const newRecord: DNSRecord = {
+        domain: config.domain,
+        ips: currentIPs,
+        timestamp,
+        recordType,
+      };
+      await this.kvStore.put(kvKey, JSON.stringify(newRecord));
       
       return {
         domain: config.domain,
         timestamp,
-        isHijacked,
-        expectedIPs: config.expectedIPs,
-        actualIPs,
+        hasChanged,
+        previousIPs: previousRecord?.ips || [],
+        currentIPs,
+        isFirstCheck: !previousRecord,
       };
     } catch (error) {
       return {
         domain: config.domain,
         timestamp,
-        isHijacked: true,
-        expectedIPs: config.expectedIPs,
-        actualIPs: [],
+        hasChanged: true,
+        previousIPs: [],
+        currentIPs: [],
+        isFirstCheck: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
@@ -79,10 +101,12 @@ export class DNSChecker {
     return ips;
   }
 
-  private areIPsMatching(actualIPs: string[], expectedIPs: string[]): boolean {
-    if (actualIPs.length === 0) return false;
+  private areIPsMatching(ips1: string[], ips2: string[]): boolean {
+    if (ips1.length !== ips2.length) return false;
     
-    // Check if all actual IPs are in the expected list
-    return actualIPs.every(ip => expectedIPs.includes(ip));
+    const sorted1 = [...ips1].sort();
+    const sorted2 = [...ips2].sort();
+    
+    return sorted1.every((ip, index) => ip === sorted2[index]);
   }
 }

@@ -1,15 +1,22 @@
 export interface DomainConfig {
   domain: string;
-  expectedIPs: string[];
   recordType?: 'A' | 'AAAA' | 'CNAME';
+}
+
+export interface DNSRecord {
+  domain: string;
+  ips: string[];
+  timestamp: number;
+  recordType: 'A' | 'AAAA' | 'CNAME';
 }
 
 export interface DNSCheckResult {
   domain: string;
   timestamp: number;
-  isHijacked: boolean;
-  expectedIPs: string[];
-  actualIPs: string[];
+  hasChanged: boolean;
+  previousIPs: string[];
+  currentIPs: string[];
+  isFirstCheck: boolean;
   error?: string;
 }
 

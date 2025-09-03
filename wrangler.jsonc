@@ -28,16 +28,31 @@
 		]
 	},
 	/**
+	 * KV Namespace Bindings
+	 * https://developers.cloudflare.com/workers/runtime-apis/kv/
+	 */
+	"kv_namespaces": [
+		{
+			"binding": "DNS_HISTORY",
+			"id": "YOUR_KV_NAMESPACE_ID",
+			"preview_id": "YOUR_KV_PREVIEW_ID"
+		}
+	],
+	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
 	 */
 	"vars": {
-		"DNS_MONITOR_CONFIG": "{\"domains\":[{\"domain\":\"example.com\",\"expectedIPs\":[\"93.184.216.34\"],\"recordType\":\"A\"}]}"
+		"DNS_MONITOR_CONFIG": "{\"domains\":[{\"domain\":\"example.com\"},{\"domain\":\"mydomain.com\"}]}"
 	}
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 * Run: wrangler secret put TELEGRAM_BOT_TOKEN
 	 * Run: wrangler secret put TELEGRAM_CHAT_ID
+	 * 
+	 * To create KV namespace:
+	 * Run: wrangler kv:namespace create "DNS_HISTORY"
+	 * Run: wrangler kv:namespace create "DNS_HISTORY" --preview
 	 */
 }

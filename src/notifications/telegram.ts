@@ -16,14 +16,14 @@ export class TelegramNotificationHandler extends BaseNotificationHandler {
   }
   
   async notify(results: DNSCheckResult[]): Promise<void> {
-    const hijackedResults = this.filterHijackedResults(results);
+    const changedResults = this.filterChangedResults(results);
     
-    if (hijackedResults.length === 0) {
-      // Only notify when there are hijacked domains
+    if (changedResults.length === 0) {
+      // Only notify when there are DNS changes
       return;
     }
     
-    const message = this.formatMessage(hijackedResults);
+    const message = this.formatMessage(changedResults);
     await this.sendTelegramMessage(message);
   }
   
