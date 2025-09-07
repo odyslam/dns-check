@@ -10,13 +10,14 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 #### `src/index.ts`
 - **Purpose**: Main entry point and request handler
 - **Key Components**:
-  - `Env` interface: Defines environment variables (lines 6-11)
-  - `performDNSCheck()`: Orchestrates the DNS checking workflow (lines 13-43)
+  - TOML config import: Imports `dns-monitor.toml` directly (line 5)
+  - `Env` interface: Defines environment variables (lines 7-12)
+  - `performDNSCheck()`: Orchestrates the DNS checking workflow (lines 14-44)
   - HTTP endpoints:
-    - `/check`: Manual DNS check trigger (lines 50-55)
-    - `/status`: Service health check (lines 57-63)
-    - `/`: Default info endpoint (lines 65-68)
-  - `scheduled()`: Cron trigger handler (lines 72-74)
+    - `/check`: Manual DNS check trigger (lines 51-56)
+    - `/status`: Service health check (lines 58-64)
+    - `/`: Default info endpoint (lines 66-69)
+  - `scheduled()`: Cron trigger handler (lines 73-75)
 
 #### `src/dns-checker.ts`
 - **Purpose**: Core DNS resolution and comparison logic
@@ -32,10 +33,10 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 #### `src/types.ts`
 - **Purpose**: TypeScript type definitions
 - **Key Types**:
-  - `DomainConfig`: Domain configuration (lines 1-4)
-  - `DNSRecord`: Stored DNS record structure (lines 6-11)
-  - `DNSCheckResult`: Check result with comparison data (lines 13-23)
-  - `NotificationHandler`: Interface for notification systems (lines 25-28)
+  - `DomainConfig`: Domain configuration with name and category support (lines 1-6)
+  - `DNSRecord`: Stored DNS record structure (lines 8-13)
+  - `DNSCheckResult`: Check result with comparison data (lines 15-25)
+  - `NotificationHandler`: Interface for notification systems (lines 27-30)
 
 #### `src/config.ts`
 - **Purpose**: Configuration management with TOML support
@@ -65,18 +66,22 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 
 ## Data Flow
 
-1. **Trigger**: Cron (every minute) or manual HTTP request
-2. **Configuration Loading**: `loadConfig()` reads from TOML file or environment
+1. **Trigger**: Cron (every minute) or manual HTTP request (`/check`)
+2. **Configuration Loading**: 
+   - Primary: Imports and parses `dns-monitor.toml` file
+   - Fallback: JSON from `DNS_MONITOR_CONFIG` env variable
+   - Default: Minimal hardcoded configuration
 3. **DNS Resolution**:
-   - Queries multiple DoH providers in parallel
-   - Adds cache-busting parameters
-   - Collects results from all resolvers
+   - Queries 3 DoH providers in parallel (Cloudflare, Google, Quad9)
+   - Adds timestamp-based cache-busting parameters
+   - Collects and compares results from all resolvers
 4. **Comparison**:
-   - Retrieves previous state from KV store
-   - Compares current vs previous IPs
-   - Detects resolver discrepancies
-5. **Storage**: Updates KV store with new state
-6. **Notification**: Sends alerts only on changes/discrepancies
+   - Retrieves previous state from KV store (key: `dns:{domain}:{recordType}`)
+   - Compares sorted IP arrays for changes
+   - Detects resolver discrepancies for hijacking detection
+   - Skips alert on first check (baseline establishment)
+5. **Storage**: Updates KV store with new state and timestamp
+6. **Notification**: Sends alerts only on changes/discrepancies (not on first check)
 
 ## Key Features
 
@@ -91,9 +96,9 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 - Skips alerts on first check (baseline establishment)
 
 ### Cache Bypassing
-- Adds timestamp-based cache buster to queries
-- Sets no-cache headers
-- Ensures fresh DNS results
+- Adds timestamp-based cache buster parameter (`cb={timestamp}`)
+- Sets `Cache-Control: no-cache, no-store` headers
+- Ensures fresh DNS results from each query
 
 ### Record Type Support
 - A records (IPv4)
@@ -138,7 +143,8 @@ category = "category"
 - KV namespace binding: `DNS_HISTORY`
 - Cron schedule: `* * * * *` (every minute)
 - Compatibility date: `2025-08-29`
-- Text file rules: Configured to import `*.toml` files
+- Text file rules: Configured to import `*.toml` files as text
+- Compatibility flags: `global_fetch_strictly_public` for security
 
 ## Alert Types
 
@@ -158,23 +164,35 @@ Triggered when resolvers return different results:
 
 ### Adding New Notification Handlers
 1. Create new file in `src/notifications/`
-2. Extend `BaseNotificationHandler`
+2. Extend `BaseNotificationHandler` class
 3. Implement `notify()` method
-4. Register in `performDNSCheck()` function
+4. Register in `performDNSCheck()` function in `src/index.ts`
 
 ### Adding New DNS Providers
-1. Add to `dohProviders` array in `DNSChecker`
-2. Ensure provider supports DNS-over-HTTPS
-3. Test response format compatibility
+1. Add to `dohProviders` array in `DNSChecker` class (`src/dns-checker.ts`)
+2. Ensure provider supports DNS-over-HTTPS with JSON response
+3. Test response format compatibility (should match DoH JSON spec)
 
-## Testing Considerations
-- Tests run with `npm test` (Vitest + Cloudflare runtime)
-- Single run mode configured
-- Environment setup in `test/env.d.ts`
+### Adding New Record Types
+1. Update `DomainConfig` type in `src/types.ts`
+2. Modify `resolveDomain()` in `src/dns-checker.ts` to handle new type
+3. Update TOML configuration documentation
+
+## Testing
+- **Test Runner**: Vitest with Cloudflare Workers runtime
+- **Command**: `npm test` (single run mode)
+- **Test Files**:
+  - `test/index.spec.ts`: Main worker endpoints
+  - `test/dns-checker.spec.ts`: DNS checking logic
+  - `test/notifications.spec.ts`: Notification handlers
+- **Environment**: Configured in `test/env.d.ts`
 
 ## Security Features
-- No hardcoded expected IPs (dynamic detection)
-- Multi-resolver consensus
-- DNS cache bypassing
-- Secure secret storage for credentials
-- Public fetch restrictions (`global_fetch_strictly_public`)
+
+1. **Dynamic Detection**: No hardcoded expected IPs - adapts to legitimate changes
+2. **Multi-Resolver Consensus**: Cross-validates results from 3 independent DNS providers
+3. **Hijacking Detection**: Alerts on resolver discrepancies
+4. **Cache Bypassing**: Prevents stale DNS results
+5. **Secure Secrets**: Telegram credentials stored as Cloudflare secrets
+6. **Fetch Restrictions**: `global_fetch_strictly_public` flag prevents internal network access
+7. **DNS-over-HTTPS**: Encrypted DNS queries prevent MITM attacks

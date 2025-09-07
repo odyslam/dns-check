@@ -4,13 +4,14 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 
 ## How It Works
 
-1. Monitors configured domains every minute
-2. Stores DNS records in Cloudflare KV
-3. Compares current DNS records with previously stored ones
-4. Sends notifications only when DNS records change
-5. First-time checks don't trigger alerts (baseline establishment)
-6. Queries multiple DNS resolvers to detect hijacking attempts
-7. Bypasses DNS caching for fresh results
+1. Monitors configured domains every minute via cron trigger
+2. Queries multiple DNS resolvers (Cloudflare, Google, Quad9) in parallel
+3. Stores DNS records in Cloudflare KV for persistence
+4. Compares current DNS records with previously stored ones
+5. Detects discrepancies between resolvers (potential hijacking)
+6. Sends notifications only when DNS records change
+7. First-time checks establish baseline without triggering alerts
+8. Bypasses DNS caching with cache-busting parameters
 
 ## Features
 
@@ -35,21 +36,17 @@ npm install
 ### 2. Create KV Namespace
 
 ```bash
-# Create production namespace
+# Create KV namespace
 wrangler kv:namespace create "DNS_HISTORY"
-
-# Create preview namespace for development
-wrangler kv:namespace create "DNS_HISTORY" --preview
 ```
 
-Update `wrangler.jsonc` with the IDs returned from the above commands:
+Update `wrangler.jsonc` with the ID returned from the above command:
 
 ```jsonc
 "kv_namespaces": [
   {
     "binding": "DNS_HISTORY",
-    "id": "YOUR_KV_NAMESPACE_ID",
-    "preview_id": "YOUR_KV_PREVIEW_ID"
+    "id": "YOUR_KV_NAMESPACE_ID"
   }
 ]
 ```
@@ -139,10 +136,15 @@ To add your own domains, simply edit the `dns-monitor.toml` file and add new ent
 
 ## Understanding Alerts
 
-When the service detects DNS changes, you'll receive an alert showing:
-- **Domain**: The affected domain
+The service only sends alerts when it detects:
+1. **DNS Changes**: IPs have changed from the last check
+2. **Resolver Discrepancies**: Different DNS providers return different results (potential hijacking)
+
+Alert information includes:
+- **Domain**: The affected domain (with friendly name if configured)
 - **Previous IPs**: The IPs from the last check
 - **Current IPs**: The newly detected IPs
+- **Resolver Results**: Individual results from each DNS provider (if discrepancy detected)
 - **Timestamp**: When the change was detected
 
 Example alerts:
@@ -227,8 +229,10 @@ npm run cf-typegen
 
 ## Important Notes
 
-- First checks for new domains won't trigger alerts (establishing baseline)
-- DNS changes can be legitimate (CDN updates, load balancing changes)
-- Always verify DNS changes are authorized before taking action
-- The service uses DNS over HTTPS from multiple providers for resolution
-- Tests must be run with `npm test` (uses Vitest with Cloudflare Workers runtime)
+- **Baseline Establishment**: First checks for new domains won't trigger alerts - the service needs to establish a baseline first
+- **Legitimate Changes**: DNS changes can be legitimate (CDN updates, load balancing, failover)
+- **Always Verify**: Confirm DNS changes are authorized before taking action
+- **Multi-Resolver Verification**: Queries 3 DNS providers simultaneously for security
+- **DNS-over-HTTPS**: Uses DoH protocol for secure DNS resolution
+- **Cache Bypassing**: Adds timestamp parameters to ensure fresh results
+- **Testing**: Run tests with `npm test` (uses Vitest with Cloudflare Workers runtime)
