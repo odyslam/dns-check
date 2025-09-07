@@ -86,7 +86,7 @@ describe('BaseNotificationHandler', () => {
   });
 
   describe('formatMessage', () => {
-    it('should format DNS change messages', () => {
+    it('should format DNS change messages with risk assessment', () => {
       const results: DNSCheckResult[] = [
         {
           domain: 'example.com',
@@ -95,16 +95,37 @@ describe('BaseNotificationHandler', () => {
           isFirstCheck: false,
           previousIPs: ['192.168.1.1'],
           currentIPs: ['192.168.1.2'],
+          riskAssessment: {
+            level: 'high',
+            factors: ['Geographic change', 'Hosting provider changed'],
+            recommendation: 'Investigate immediately',
+          },
+          currentIPAnalysis: [
+            {
+              ip: '192.168.1.2',
+              geolocation: { country: 'Russia', city: 'Moscow' },
+              asn: { organization: 'Suspicious Hosting' },
+              reputation: { isClean: false, isMalicious: true },
+            },
+          ],
         },
       ];
 
       const message = handler['formatMessage'](results);
       
       expect(message).toContain('DNS Changes/Discrepancies Detected!');
+      expect(message).toContain('Risk Level: HIGH');
       expect(message).toContain('example.com');
       expect(message).toContain('192.168.1.1');
       expect(message).toContain('192.168.1.2');
       expect(message).toContain('DNS records changed');
+      expect(message).toContain('Moscow, Russia');
+      expect(message).toContain('Suspicious Hosting');
+      expect(message).toContain('MALICIOUS IP DETECTED');
+      expect(message).toContain('Risk Assessment');
+      expect(message).toContain('Geographic change');
+      expect(message).toContain('Recommendation');
+      expect(message).toContain('Investigate immediately');
     });
 
     it('should format resolver discrepancy messages', () => {

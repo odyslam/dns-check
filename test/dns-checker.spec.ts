@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DNSChecker } from '../src/dns-checker';
-import type { DomainConfig, DNSRecord } from '../src/types';
+import type { DomainConfig, DNSRecord, IPAnalysis } from '../src/types';
 
 // Mock KV namespace
 const mockKVNamespace = {
@@ -130,7 +130,7 @@ describe('DNSChecker', () => {
   });
 
   describe('checkDomain', () => {
-    it('should detect DNS changes', async () => {
+    it('should detect DNS changes and include IP analysis', async () => {
       const previousRecord: DNSRecord = {
         domain: 'example.com',
         ips: ['192.168.1.1'],
@@ -141,12 +141,22 @@ describe('DNSChecker', () => {
       mockKVNamespace.get.mockResolvedValue(JSON.stringify(previousRecord));
       mockKVNamespace.put.mockResolvedValue(undefined);
 
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: () => Promise.resolve({
-          Status: 0,
-          Answer: [{ type: 1, data: '192.168.1.2' }], // Changed IP
-        }),
+      (global.fetch as any).mockImplementation((url: string) => {
+        // Mock DNS resolution
+        if (url.includes('dns-query') || url.includes('dns.google') || url.includes('resolve')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({
+              Status: 0,
+              Answer: [{ type: 1, data: '192.168.1.2' }], // Changed IP
+            }),
+          });
+        }
+        // Mock IP analysis APIs (will fail, but that's expected in tests)
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({}),
+        });
       });
 
       const config: DomainConfig = { domain: 'example.com' };
@@ -155,6 +165,11 @@ describe('DNSChecker', () => {
       expect(result.hasChanged).toBe(true);
       expect(result.previousIPs).toEqual(['192.168.1.1']);
       expect(result.currentIPs).toEqual(['192.168.1.2']);
+      
+      // Should have IP analysis for changed IPs
+      expect(result.currentIPAnalysis).toBeDefined();
+      expect(result.previousIPAnalysis).toBeDefined();
+      expect(result.riskAssessment).toBeDefined();
     });
 
     it('should support NS record type', async () => {
@@ -202,6 +217,26 @@ describe('DNSChecker', () => {
           }),
         })
       );
+    });
+    
+    it('should not perform IP analysis for CNAME records', async () => {
+      mockKVNamespace.get.mockResolvedValue(null);
+      mockKVNamespace.put.mockResolvedValue(undefined);
+
+      (global.fetch as any).mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({
+          Status: 0,
+          Answer: [{ type: 5, data: 'alias.example.com' }], // CNAME record
+        }),
+      });
+
+      const config: DomainConfig = { domain: 'example.com', recordType: 'CNAME' };
+      const result = await dnsChecker.checkDomain(config);
+
+      expect(result.currentIPs).toEqual(['alias.example.com']);
+      expect(result.currentIPAnalysis).toBeUndefined();
+      expect(result.riskAssessment).toBeUndefined();
     });
   });
 
