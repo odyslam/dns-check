@@ -99,6 +99,10 @@ domain = "synthetix.io"
 record_type = "A"
 category = "defi"
 
+# Note: The /check endpoint may timeout with too many domains
+# Consider limiting to 5-10 domains for manual checks
+# The scheduled cron job will handle all domains
+
 # Add your own domains below
 # Example:
 # [[domains]]
