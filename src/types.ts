@@ -1,13 +1,13 @@
 export interface DomainConfig {
   domain: string;
-  recordType?: 'A' | 'AAAA' | 'CNAME';
+  recordType?: 'A' | 'AAAA' | 'CNAME' | 'NS';
 }
 
 export interface DNSRecord {
   domain: string;
   ips: string[];
   timestamp: number;
-  recordType: 'A' | 'AAAA' | 'CNAME';
+  recordType: 'A' | 'AAAA' | 'CNAME' | 'NS';
 }
 
 export interface DNSCheckResult {
@@ -18,6 +18,8 @@ export interface DNSCheckResult {
   currentIPs: string[];
   isFirstCheck: boolean;
   error?: string;
+  resolverDiscrepancy?: boolean;
+  resolverResults?: { [resolver: string]: string[] };
 }
 
 export interface NotificationHandler {
