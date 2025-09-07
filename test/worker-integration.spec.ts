@@ -94,9 +94,13 @@ describe('DNS Monitor Worker Integration', () => {
       await waitOnExecutionContext(ctx);
       
       expect(response.status).toBe(200);
-      const results = await response.json() as any[];
+      const data = await response.json() as any;
       
-      // Should check both domains from the mocked TOML
+      // Check endpoint now returns lite mode response
+      expect(data.note).toContain('lite mode');
+      const results = data.results;
+      
+      // Should check both domains from the mocked TOML (or up to 5 in lite mode)
       expect(results).toHaveLength(2);
       expect(results[0].domain).toBe('test.example.com');
       expect(results[1].domain).toBe('api.example.com');
@@ -144,19 +148,21 @@ describe('DNS Monitor Worker Integration', () => {
       await waitOnExecutionContext(ctx);
       
       expect(response.status).toBe(200);
-      const results = await response.json() as any[];
+      const data = await response.json() as any;
+      const results = data.results;
       
       // Find the changed domain result
-      const changedResult = results.find(r => r.domain === 'test.example.com');
+      const changedResult = results.find((r: any) => r.domain === 'test.example.com');
       expect(changedResult).toBeDefined();
       expect(changedResult.hasChanged).toBe(true);
       expect(changedResult.previousIPs).toEqual(['10.0.0.1']);
       expect(changedResult.currentIPs).toEqual(['192.168.1.1']);
       
-      // Should have risk assessment for changed IPs
-      expect(changedResult.riskAssessment).toBeDefined();
-      expect(changedResult.currentIPAnalysis).toBeDefined();
-      expect(changedResult.previousIPAnalysis).toBeDefined();
+      // In lite mode, IP analysis is disabled
+      // So these should be undefined
+      expect(changedResult.riskAssessment).toBeUndefined();
+      expect(changedResult.currentIPAnalysis).toBeUndefined();
+      expect(changedResult.previousIPAnalysis).toBeUndefined();
     });
 
     it('should handle scheduled trigger', async () => {
@@ -215,7 +221,8 @@ describe('DNS Monitor Worker Integration', () => {
       await waitOnExecutionContext(ctx);
       
       expect(response.status).toBe(200);
-      const results = await response.json() as any[];
+      const data = await response.json() as any;
+      const results = data.results;
       
       // Should use the env config as fallback
       expect(results.length).toBeGreaterThan(0);

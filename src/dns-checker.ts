@@ -5,12 +5,14 @@ export class DNSChecker {
   private dohProviders = [
     { name: 'Cloudflare', url: 'https://cloudflare-dns.com/dns-query' },
     { name: 'Google', url: 'https://dns.google/resolve' },
-    { name: 'Quad9', url: 'https://dns.quad9.net:5053/dns-query' },
+    // Removed Quad9 to reduce subrequests (it's also failing with 522 errors)
   ];
   private ipAnalyzer: IPAnalyzer;
+  private enableIpAnalysis: boolean;
   
-  constructor(private kvStore: KVNamespace) {
+  constructor(private kvStore: KVNamespace, options?: { enableIpAnalysis?: boolean }) {
     this.ipAnalyzer = new IPAnalyzer();
+    this.enableIpAnalysis = options?.enableIpAnalysis ?? true;
   }
 
   async checkDomain(config: DomainConfig): Promise<DNSCheckResult> {
@@ -39,24 +41,30 @@ export class DNSChecker {
         ? !this.areIPsMatching(currentIPs, previousRecord.ips)
         : false;
       
-      // Analyze IPs for security metadata (only for A/AAAA records)
+      // Analyze IPs for security metadata (only for A/AAAA records and if enabled)
       let previousIPAnalysis: IPAnalysis[] | undefined;
       let currentIPAnalysis: IPAnalysis[] | undefined;
       let riskAssessment: DNSCheckResult['riskAssessment'] | undefined;
       
-      if (recordType === 'A' || recordType === 'AAAA') {
-        // Analyze current IPs
-        currentIPAnalysis = await this.ipAnalyzer.analyzeIPs(currentIPs);
-        
-        // If there were previous IPs and they changed, analyze them too
-        if (previousRecord && hasChanged) {
-          previousIPAnalysis = await this.ipAnalyzer.analyzeIPs(previousRecord.ips);
-          
-          // Assess risk of the change
-          riskAssessment = this.ipAnalyzer.assessRisk(
-            previousIPAnalysis,
-            currentIPAnalysis
-          );
+      if (this.enableIpAnalysis && (recordType === 'A' || recordType === 'AAAA')) {
+        // Only analyze if there are changes to minimize subrequests
+        if (hasChanged && previousRecord) {
+          try {
+            // Limit to first 2 IPs to reduce subrequests
+            currentIPAnalysis = await this.ipAnalyzer.analyzeIPs(currentIPs.slice(0, 2));
+            
+            if (previousRecord) {
+              previousIPAnalysis = await this.ipAnalyzer.analyzeIPs(previousRecord.ips.slice(0, 2));
+              
+              // Assess risk of the change
+              riskAssessment = this.ipAnalyzer.assessRisk(
+                previousIPAnalysis,
+                currentIPAnalysis
+              );
+            }
+          } catch (error) {
+            console.error('IP analysis failed, continuing without it:', error);
+          }
         }
       }
       

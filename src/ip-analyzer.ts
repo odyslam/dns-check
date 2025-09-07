@@ -23,7 +23,7 @@ export class IPAnalyzer {
     }
   ];
 
-  async analyzeIP(ip: string): Promise<IPAnalysis> {
+  async analyzeIP(ip: string, options?: { skipGeo?: boolean; skipReputation?: boolean; skipReverseDns?: boolean }): Promise<IPAnalysis> {
     const analysis: IPAnalysis = { ip };
 
     // Skip analysis for private/local IPs
@@ -33,36 +33,47 @@ export class IPAnalyzer {
       return analysis;
     }
 
-    // Get geolocation and ASN info
-    try {
-      const geoData = await this.getGeolocation(ip);
-      if (geoData) {
-        analysis.geolocation = geoData.geolocation;
-        analysis.asn = geoData.asn;
+    // Get geolocation and ASN info (skip if disabled to save subrequests)
+    if (!options?.skipGeo) {
+      try {
+        const geoData = await this.getGeolocation(ip);
+        if (geoData) {
+          analysis.geolocation = geoData.geolocation;
+          analysis.asn = geoData.asn;
+        }
+      } catch (error) {
+        console.error(`Failed to get geolocation for ${ip}:`, error);
       }
-    } catch (error) {
-      console.error(`Failed to get geolocation for ${ip}:`, error);
     }
 
-    // Get reputation info
-    try {
-      analysis.reputation = await this.getReputation(ip);
-    } catch (error) {
-      console.error(`Failed to get reputation for ${ip}:`, error);
+    // Get reputation info (skip if disabled to save subrequests)
+    if (!options?.skipReputation) {
+      try {
+        analysis.reputation = await this.getReputation(ip);
+      } catch (error) {
+        console.error(`Failed to get reputation for ${ip}:`, error);
+      }
     }
 
-    // Get reverse DNS
-    try {
-      analysis.reverseDns = await this.getReverseDns(ip);
-    } catch (error) {
-      console.error(`Failed to get reverse DNS for ${ip}:`, error);
+    // Get reverse DNS (skip if disabled to save subrequests)
+    if (!options?.skipReverseDns) {
+      try {
+        analysis.reverseDns = await this.getReverseDns(ip);
+      } catch (error) {
+        console.error(`Failed to get reverse DNS for ${ip}:`, error);
+      }
     }
 
     return analysis;
   }
 
-  async analyzeIPs(ips: string[]): Promise<IPAnalysis[]> {
-    const promises = ips.map(ip => this.analyzeIP(ip));
+  async analyzeIPs(ips: string[], options?: { skipGeo?: boolean; skipReputation?: boolean; skipReverseDns?: boolean }): Promise<IPAnalysis[]> {
+    // For production, only do basic analysis to avoid subrequest limits
+    const promises = ips.map(ip => this.analyzeIP(ip, {
+      skipGeo: options?.skipGeo,
+      skipReputation: options?.skipReputation,
+      skipReverseDns: true, // Always skip reverse DNS in bulk to save subrequests
+    }));
     return Promise.all(promises);
   }
 

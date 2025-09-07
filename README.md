@@ -272,7 +272,18 @@ npm run cf-typegen
 - **Baseline Establishment**: First checks for new domains won't trigger alerts - the service needs to establish a baseline first
 - **Legitimate Changes**: DNS changes can be legitimate (CDN updates, load balancing, failover)
 - **Always Verify**: Confirm DNS changes are authorized before taking action
-- **Multi-Resolver Verification**: Queries 3 DNS providers simultaneously for security
+- **Multi-Resolver Verification**: Queries 2 DNS providers (Cloudflare, Google) for verification
 - **DNS-over-HTTPS**: Uses DoH protocol for secure DNS resolution
 - **Cache Bypassing**: Adds timestamp parameters to ensure fresh results
 - **Testing**: Run tests with `npm test` (uses Vitest with Cloudflare Workers runtime)
+
+## Cloudflare Worker Limitations
+
+Due to Cloudflare Worker subrequest limits (50 per request):
+- **Manual `/check` endpoint**: Runs in "lite mode" - checks only 5 domains without IP analysis
+- **Scheduled cron jobs**: Can handle all domains but may skip some IP analysis features
+- **Production optimizations**:
+  - Reduced from 3 to 2 DNS resolvers
+  - IP analysis only runs on changed domains
+  - Limited to analyzing first 2 IPs per domain
+  - Reverse DNS lookups disabled in bulk operations

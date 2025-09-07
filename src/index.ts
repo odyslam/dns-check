@@ -11,9 +11,17 @@ interface Env {
   DNS_HISTORY: KVNamespace;
 }
 
-async function performDNSCheck(env: Env): Promise<DNSCheckResult[]> {
+async function performDNSCheck(env: Env, options?: { lite?: boolean }): Promise<DNSCheckResult[]> {
   const config = loadConfig(env, configToml);
-  const checker = new DNSChecker(env.DNS_HISTORY);
+  
+  // In lite mode, check fewer domains and disable IP analysis
+  const domainsToCheck = options?.lite 
+    ? config.domains.slice(0, 5) // Only check first 5 domains in lite mode
+    : config.domains;
+  
+  const checker = new DNSChecker(env.DNS_HISTORY, {
+    enableIpAnalysis: !options?.lite // Disable IP analysis in lite mode
+  });
   
   // Create notification handlers
   const notificationHandlers: NotificationHandler[] = [];
@@ -29,7 +37,7 @@ async function performDNSCheck(env: Env): Promise<DNSCheckResult[]> {
   }
   
   // Perform DNS checks
-  const results = await checker.checkDomains(config.domains);
+  const results = await checker.checkDomains(domainsToCheck);
   
   // Send notifications
   for (const handler of notificationHandlers) {
@@ -49,9 +57,12 @@ export default {
     
     switch (url.pathname) {
       case '/check':
-        // Manual trigger endpoint
-        const results = await performDNSCheck(env);
-        return new Response(JSON.stringify(results, null, 2), {
+        // Manual trigger endpoint - use lite mode to avoid timeouts
+        const results = await performDNSCheck(env, { lite: true });
+        return new Response(JSON.stringify({
+          note: 'Running in lite mode (5 domains, no IP analysis) to avoid timeouts',
+          results: results,
+        }, null, 2), {
           headers: { 'Content-Type': 'application/json' },
         });
         
