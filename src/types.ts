@@ -1,6 +1,8 @@
 export interface DomainConfig {
+  name?: string;
   domain: string;
   recordType?: 'A' | 'AAAA' | 'CNAME' | 'NS';
+  category?: string;
 }
 
 export interface DNSRecord {

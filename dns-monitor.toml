@@ -1,0 +1,108 @@
+# DNS Monitor Configuration
+# This file contains all domains to be monitored for DNS changes
+
+# Notification settings
+[notifications.telegram]
+enabled = true
+# Set these as secrets in Cloudflare:
+# wrangler secret put TELEGRAM_BOT_TOKEN
+# wrangler secret put TELEGRAM_CHAT_ID
+
+# DeFi Protocols
+[[domains]]
+name = "Uniswap"
+domain = "app.uniswap.org"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "AAVE"
+domain = "aave.com"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Curve Finance"
+domain = "curve.fi"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Lido"
+domain = "lido.fi"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "MakerDAO"
+domain = "makerdao.com"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Sky Protocol"
+domain = "sky.money"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Compound"
+domain = "compound.finance"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "SushiSwap"
+domain = "sushi.com"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "PancakeSwap"
+domain = "pancakeswap.finance"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Balancer"
+domain = "balancer.fi"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Convex Finance"
+domain = "convex.finance"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Yearn Finance"
+domain = "yearn.finance"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Summer.fi"
+domain = "summer.fi"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "1inch"
+domain = "1inch.io"
+record_type = "A"
+category = "defi"
+
+[[domains]]
+name = "Synthetix"
+domain = "synthetix.io"
+record_type = "A"
+category = "defi"
+
+# Add your own domains below
+# Example:
+# [[domains]]
+# name = "My Website"
+# domain = "example.com"
+# record_type = "A"  # Options: A, AAAA, CNAME, NS
+# category = "personal"

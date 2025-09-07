@@ -7,6 +7,12 @@
 	"name": "dns-monitor",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-08-29",
+	"rules": [
+		{
+			"type": "Text",
+			"globs": ["**/*.toml"]
+		}
+	],
 	"compatibility_flags": [
 		"global_fetch_strictly_public"
 	],
@@ -34,17 +40,15 @@
 	"kv_namespaces": [
 		{
 			"binding": "DNS_HISTORY",
-			"id": "YOUR_KV_NAMESPACE_ID",
+			"id": "c18b03a571844792bd5ba2b4f9fa538a",
 			"preview_id": "YOUR_KV_PREVIEW_ID"
 		}
 	],
 	/**
 	 * Environment Variables
 	 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+	 * Configuration is now loaded from dns-monitor.toml file
 	 */
-	"vars": {
-		"DNS_MONITOR_CONFIG": "{\"domains\":[{\"domain\":\"example.com\"},{\"domain\":\"mydomain.com\"}]}"
-	}
 	/**
 	 * Note: Use secrets to store sensitive data.
 	 * https://developers.cloudflare.com/workers/configuration/secrets/

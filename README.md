@@ -56,21 +56,27 @@ Update `wrangler.jsonc` with the IDs returned from the above commands:
 
 ### 3. Configure Domains to Monitor
 
-Edit `wrangler.jsonc` and update the `DNS_MONITOR_CONFIG` variable:
+Edit the `dns-monitor.toml` file to add or modify domains:
 
-```json
-"vars": {
-  "DNS_MONITOR_CONFIG": "{\"domains\":[{\"domain\":\"example.com\"},{\"domain\":\"yourdomain.com\"}]}"
-}
+```toml
+[[domains]]
+name = "My Website"
+domain = "example.com"
+record_type = "A"  # Options: A, AAAA, CNAME, NS
+category = "personal"
+
+[[domains]]
+name = "Another Site"
+domain = "example.org"
+record_type = "AAAA"
+category = "business"
 ```
 
-Or configure individual domains with record types:
-
-```json
-"vars": {
-  "DNS_MONITOR_CONFIG": "{\"domains\":[{\"domain\":\"example.com\",\"recordType\":\"A\"},{\"domain\":\"example.org\",\"recordType\":\"AAAA\"}]}"
-}
-```
+The TOML file provides an easy-to-read format for managing your monitored domains. Each domain entry supports:
+- `name`: Friendly name for the domain (optional)
+- `domain`: The domain to monitor (required)
+- `record_type`: DNS record type - A, AAAA, CNAME, or NS (optional, defaults to 'A')
+- `category`: Category for organization (optional)
 
 ### 4. Set Up Telegram Notifications (Optional)
 
@@ -90,14 +96,23 @@ npm run deploy
 
 ## Configuration
 
-The DNS monitor accepts configuration through the `DNS_MONITOR_CONFIG` environment variable. Each domain entry can include:
+The DNS monitor is configured through the `dns-monitor.toml` file. Simply edit this file to add, remove, or modify domains to monitor.
 
-- `domain`: The domain name to monitor (required)
-- `recordType`: DNS record type - A, AAAA, CNAME, or NS (optional, defaults to 'A')
+### Configuration File Format
+
+The TOML configuration file supports the following structure:
+
+```toml
+[[domains]]
+name = "Service Name"        # Optional friendly name
+domain = "example.com"        # Required domain to monitor
+record_type = "A"            # Optional: A, AAAA, CNAME, or NS (default: A)
+category = "category"         # Optional category for organization
+```
 
 ### Default DeFi Protocol Monitoring
 
-The service comes pre-configured to monitor major DeFi protocols including:
+The `dns-monitor.toml` file comes pre-configured to monitor major DeFi protocols including:
 - Uniswap (app.uniswap.org)
 - AAVE (aave.com)
 - Curve Finance (curve.fi)
@@ -114,16 +129,7 @@ The service comes pre-configured to monitor major DeFi protocols including:
 - 1inch (1inch.io)
 - Synthetix (synthetix.io)
 
-Example configuration:
-```json
-{
-  "domains": [
-    { "domain": "app.uniswap.org" },
-    { "domain": "aave.com" },
-    { "domain": "curve.fi", "recordType": "A" }
-  ]
-}
-```
+To add your own domains, simply edit the `dns-monitor.toml` file and add new entries following the same format.
 
 ## API Endpoints
 

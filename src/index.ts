@@ -2,6 +2,7 @@ import { DNSChecker } from './dns-checker';
 import { loadConfig } from './config';
 import { TelegramNotificationHandler } from './notifications/telegram';
 import { NotificationHandler, DNSCheckResult } from './types';
+import configToml from '../dns-monitor.toml';
 
 interface Env {
   DNS_MONITOR_CONFIG?: string;
@@ -11,7 +12,7 @@ interface Env {
 }
 
 async function performDNSCheck(env: Env): Promise<DNSCheckResult[]> {
-  const config = loadConfig(env);
+  const config = loadConfig(env, configToml);
   const checker = new DNSChecker(env.DNS_HISTORY);
   
   // Create notification handlers
