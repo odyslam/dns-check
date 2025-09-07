@@ -101,6 +101,9 @@ describe('DNSChecker', () => {
     });
 
     it('should handle failed resolver queries gracefully', async () => {
+      // Suppress console.error for this test
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      
       (global.fetch as any).mockImplementation((url: string) => {
         if (url.includes('google')) {
           return Promise.reject(new Error('Network error'));
@@ -120,6 +123,9 @@ describe('DNSChecker', () => {
       expect(result.Google).toEqual([]);
       expect(result.Cloudflare).toEqual(['192.168.1.1']);
       expect(result.Quad9).toEqual(['192.168.1.1']);
+      
+      // Restore console.error
+      consoleSpy.mockRestore();
     });
   });
 
