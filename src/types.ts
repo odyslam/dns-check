@@ -12,6 +12,30 @@ export interface DNSRecord {
   recordType: 'A' | 'AAAA' | 'CNAME' | 'NS';
 }
 
+export interface IPAnalysis {
+  ip: string;
+  geolocation?: {
+    country?: string;
+    city?: string;
+    region?: string;
+    lat?: number;
+    lon?: number;
+  };
+  asn?: {
+    number?: number;
+    name?: string;
+    organization?: string;
+  };
+  reputation?: {
+    isClean: boolean;
+    isMalicious?: boolean;
+    threatScore?: number;
+    categories?: string[];
+    source?: string;
+  };
+  reverseDns?: string;
+}
+
 export interface DNSCheckResult {
   domain: string;
   timestamp: number;
@@ -22,6 +46,13 @@ export interface DNSCheckResult {
   error?: string;
   resolverDiscrepancy?: boolean;
   resolverResults?: { [resolver: string]: string[] };
+  previousIPAnalysis?: IPAnalysis[];
+  currentIPAnalysis?: IPAnalysis[];
+  riskAssessment?: {
+    level: 'low' | 'medium' | 'high' | 'critical';
+    factors: string[];
+    recommendation: string;
+  };
 }
 
 export interface NotificationHandler {

@@ -7,6 +7,22 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 
 ### Core Files
 
+#### `src/ip-analyzer.ts`
+- **Purpose**: IP intelligence and risk assessment
+- **Key Components**:
+  - `IPAnalyzer` class: Main analysis orchestrator
+  - `analyzeIP()`: Collects geolocation, ASN, reputation data
+  - `getGeolocation()`: Uses ip-api.com and ipapi.co APIs
+  - `getReputation()`: Checks against threat databases
+  - `getReverseDns()`: PTR record lookup via DoH
+  - `assessRisk()`: Calculates threat level and recommendations
+- **Risk Factors**:
+  - Malicious IP detection
+  - Geographic location changes
+  - High-risk country movements
+  - ASN/hosting provider changes
+  - Missing reverse DNS
+
 #### `src/index.ts`
 - **Purpose**: Main entry point and request handler
 - **Key Components**:
@@ -95,14 +111,22 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 - Compares sorted IP arrays for changes
 - Skips alerts on first check (baseline establishment)
 
+### Risk Assessment & IP Intelligence
+- **Geolocation Analysis**: Tracks IP geographic locations
+- **ASN Monitoring**: Identifies hosting providers and organizations
+- **Reputation Checking**: Detects malicious IPs and threat categories
+- **Reverse DNS Lookup**: Validates PTR records
+- **Risk Scoring**: Automated threat level assessment (Low/Medium/High/Critical)
+- **Smart Recommendations**: Context-aware security guidance
+
 ### Cache Bypassing
 - Adds timestamp-based cache buster parameter (`cb={timestamp}`)
 - Sets `Cache-Control: no-cache, no-store` headers
 - Ensures fresh DNS results from each query
 
 ### Record Type Support
-- A records (IPv4)
-- AAAA records (IPv6)
+- A records (IPv4) - with full IP analysis
+- AAAA records (IPv6) - with full IP analysis
 - CNAME records
 - NS records (nameservers)
 

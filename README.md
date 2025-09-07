@@ -17,6 +17,9 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 
 - Monitors multiple domains for DNS changes
 - Detects DNS record changes automatically
+- **Risk Assessment**: Analyzes changes to determine threat level
+- **IP Intelligence**: Geolocation, ASN, and reputation checking
+- **Malicious IP Detection**: Identifies known bad actors and suspicious hosts
 - No need to maintain expected IP lists
 - Modular notification system (Telegram support included)
 - Uses Cloudflare KV for persistent storage
@@ -140,26 +143,63 @@ The service only sends alerts when it detects:
 1. **DNS Changes**: IPs have changed from the last check
 2. **Resolver Discrepancies**: Different DNS providers return different results (potential hijacking)
 
-Alert information includes:
+### Risk Levels
+- 🟢 **LOW**: Minor infrastructure changes, likely routine
+- 🟡 **MEDIUM**: Notable changes that should be verified
+- 🟠 **HIGH**: Suspicious changes requiring immediate investigation
+- 🔴 **CRITICAL**: Strong indicators of DNS hijacking, immediate action required
+
+### Alert Information Includes
+- **Risk Assessment**: Threat level with specific factors and recommendations
 - **Domain**: The affected domain (with friendly name if configured)
-- **Previous IPs**: The IPs from the last check
-- **Current IPs**: The newly detected IPs
+- **IP Analysis**:
+  - 📍 Geographic location (country, city)
+  - 🏢 Hosting provider (ASN organization)
+  - ✅/⚠️ Reputation status
+  - 🔗 Reverse DNS records
+- **Previous vs Current IPs**: Complete comparison with metadata
 - **Resolver Results**: Individual results from each DNS provider (if discrepancy detected)
 - **Timestamp**: When the change was detected
 
 Example alerts:
 
-**DNS Change Alert:**
+**Enhanced DNS Change Alert:**
 ```
 🚨 DNS Changes/Discrepancies Detected!
+
+🟠 Risk Level: HIGH
 
 Domain: example.com
 Status: DNS records changed
 Previous IPs: 93.184.216.34
 Current IPs: 192.0.2.1
-Time: 2024-01-01T12:00:00.000Z
 
-⚠️ Verify these changes are legitimate!
+📊 Previous IP Analysis:
+  • 93.184.216.34:
+    📍 Location: Los Angeles, United States
+    🏢 Provider: Example Inc.
+    🔗 Reverse DNS: example.com
+
+📊 Current IP Analysis:
+  • 192.0.2.1:
+    📍 Location: Moscow, Russia
+    🏢 Provider: Unknown Hosting
+    ⚠️ MALICIOUS IP DETECTED!
+    🏷️ Categories: Known bulletproof hosting
+
+🔍 Risk Assessment:
+  🚨 1 IP(s) flagged as malicious
+  📍 Geographic change: moved to Russia
+  ⚠️ Moved to high-risk countries: Russia
+  🏢 Hosting provider changed to: Unknown Hosting
+
+💡 Recommendation:
+⚠️ HIGH RISK: Significant suspicious indicators detected. Investigate immediately.
+
+Time: 2024-01-01T12:00:00.000Z
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ Please review the risk assessment and verify if these changes are legitimate!
 ```
 
 **DNS Hijacking Alert:**

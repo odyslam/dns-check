@@ -1,4 +1,5 @@
-import { DomainConfig, DNSCheckResult, DNSRecord } from './types';
+import { DomainConfig, DNSCheckResult, DNSRecord, IPAnalysis } from './types';
+import { IPAnalyzer } from './ip-analyzer';
 
 export class DNSChecker {
   private dohProviders = [
@@ -6,8 +7,11 @@ export class DNSChecker {
     { name: 'Google', url: 'https://dns.google/resolve' },
     { name: 'Quad9', url: 'https://dns.quad9.net:5053/dns-query' },
   ];
+  private ipAnalyzer: IPAnalyzer;
   
-  constructor(private kvStore: KVNamespace) {}
+  constructor(private kvStore: KVNamespace) {
+    this.ipAnalyzer = new IPAnalyzer();
+  }
 
   async checkDomain(config: DomainConfig): Promise<DNSCheckResult> {
     const timestamp = Date.now();
@@ -35,6 +39,27 @@ export class DNSChecker {
         ? !this.areIPsMatching(currentIPs, previousRecord.ips)
         : false;
       
+      // Analyze IPs for security metadata (only for A/AAAA records)
+      let previousIPAnalysis: IPAnalysis[] | undefined;
+      let currentIPAnalysis: IPAnalysis[] | undefined;
+      let riskAssessment: DNSCheckResult['riskAssessment'] | undefined;
+      
+      if (recordType === 'A' || recordType === 'AAAA') {
+        // Analyze current IPs
+        currentIPAnalysis = await this.ipAnalyzer.analyzeIPs(currentIPs);
+        
+        // If there were previous IPs and they changed, analyze them too
+        if (previousRecord && hasChanged) {
+          previousIPAnalysis = await this.ipAnalyzer.analyzeIPs(previousRecord.ips);
+          
+          // Assess risk of the change
+          riskAssessment = this.ipAnalyzer.assessRisk(
+            previousIPAnalysis,
+            currentIPAnalysis
+          );
+        }
+      }
+      
       // Store current state in KV
       const newRecord: DNSRecord = {
         domain: config.domain,
@@ -53,6 +78,9 @@ export class DNSChecker {
         isFirstCheck: !previousRecord,
         resolverDiscrepancy,
         resolverResults,
+        previousIPAnalysis,
+        currentIPAnalysis,
+        riskAssessment,
       };
     } catch (error) {
       return {
