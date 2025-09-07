@@ -4,11 +4,13 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 
 ## How It Works
 
-1. Monitors configured domains every 5 minutes
+1. Monitors configured domains every minute
 2. Stores DNS records in Cloudflare KV
 3. Compares current DNS records with previously stored ones
 4. Sends notifications only when DNS records change
 5. First-time checks don't trigger alerts (baseline establishment)
+6. Queries multiple DNS resolvers to detect hijacking attempts
+7. Bypasses DNS caching for fresh results
 
 ## Features
 
@@ -17,7 +19,10 @@ A Cloudflare Worker service that monitors DNS records for changes and potential 
 - No need to maintain expected IP lists
 - Modular notification system (Telegram support included)
 - Uses Cloudflare KV for persistent storage
-- Runs automatically every 5 minutes using cron triggers
+- Runs automatically every minute using cron triggers
+- Multi-resolver queries (Cloudflare, Google, Quad9) for hijack detection
+- Cache bypassing to ensure fresh DNS results
+- Support for NS (nameserver) record monitoring
 
 ## Setup
 
@@ -88,7 +93,7 @@ npm run deploy
 The DNS monitor accepts configuration through the `DNS_MONITOR_CONFIG` environment variable. Each domain entry can include:
 
 - `domain`: The domain name to monitor (required)
-- `recordType`: DNS record type - A, AAAA, or CNAME (optional, defaults to 'A')
+- `recordType`: DNS record type - A, AAAA, CNAME, or NS (optional, defaults to 'A')
 
 ### Default DeFi Protocol Monitoring
 
@@ -134,14 +139,32 @@ When the service detects DNS changes, you'll receive an alert showing:
 - **Current IPs**: The newly detected IPs
 - **Timestamp**: When the change was detected
 
-Example alert:
+Example alerts:
+
+**DNS Change Alert:**
 ```
-🚨 DNS Changes Detected!
+🚨 DNS Changes/Discrepancies Detected!
 
 Domain: example.com
+Status: DNS records changed
 Previous IPs: 93.184.216.34
 Current IPs: 192.0.2.1
+Time: 2024-01-01T12:00:00.000Z
 
+⚠️ Verify these changes are legitimate!
+```
+
+**DNS Hijacking Alert:**
+```
+🚨 DNS Changes/Discrepancies Detected!
+
+Domain: example.com
+⚠️ ALERT: Resolver Discrepancy Detected!
+Different DNS resolvers are returning different results:
+  • Cloudflare: 93.184.216.34
+  • Google: 192.0.2.1
+  • Quad9: 93.184.216.34
+This could indicate a DNS hijacking attempt!
 Time: 2024-01-01T12:00:00.000Z
 
 ⚠️ Verify these changes are legitimate!
@@ -149,11 +172,11 @@ Time: 2024-01-01T12:00:00.000Z
 
 ## Cron Schedule
 
-By default, the worker runs every 5 minutes. You can modify this in `wrangler.jsonc`:
+By default, the worker runs every minute. You can modify this in `wrangler.jsonc`:
 
 ```json
 "triggers": {
-  "crons": ["*/5 * * * *"]
+  "crons": ["* * * * *"]
 }
 ```
 
@@ -189,7 +212,7 @@ export class SlackNotificationHandler extends BaseNotificationHandler {
 # Start development server
 npm run dev
 
-# Run tests
+# Run tests (requires npm, not bun)
 npm test
 
 # Check types
@@ -201,4 +224,5 @@ npm run cf-typegen
 - First checks for new domains won't trigger alerts (establishing baseline)
 - DNS changes can be legitimate (CDN updates, load balancing changes)
 - Always verify DNS changes are authorized before taking action
-- The service uses Cloudflare's DNS over HTTPS for resolution
+- The service uses DNS over HTTPS from multiple providers for resolution
+- Tests must be run with `npm test` (uses Vitest with Cloudflare Workers runtime)
